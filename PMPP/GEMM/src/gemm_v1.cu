@@ -19,7 +19,7 @@ __global__ void matrixMul1(float *M, float *N, float *P, int r, int s, int t){
     int Row = by * TILE_WIDTH + ty;
     int Col = bx * TILE_WIDTH + tx;
 
-    int Pvalue = 0;
+    float Pvalue = 0;
 
     for(int phase = 0; phase < ceil(s/(float)TILE_WIDTH); phase++){
         if(Row < r && (phase * TILE_WIDTH + tx) < s)

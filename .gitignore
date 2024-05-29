@@ -5,5 +5,7 @@
 *.cubin
 *.fatbin
 *.dat
+*.out
 build/
+output/
 .vscode/
