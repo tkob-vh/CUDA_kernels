@@ -60,6 +60,10 @@ int main(int argc, char **argv){
     else if(mode == "gemmv0"){
         printf("The mode is gemmv0\n");
         float *d_a, *d_b, *d_c;
+        
+
+        auto t1 = std::chrono::steady_clock::now();
+
         cudaMalloc(&d_a, n1 * n2 * sizeof(float));
         cudaMalloc(&d_b, n2 * n3 * sizeof(float));
         cudaMalloc(&d_c, n1 * n3 * sizeof(float));
@@ -70,13 +74,12 @@ int main(int argc, char **argv){
         dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
         dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
 
-        // Measure the time
-        auto t1 = std::chrono::steady_clock::now();
         matrixMul0<<<gridDim, blockDim>>>(d_a, d_b, d_c, n1);
         cudaDeviceSynchronize();
-        auto t2 = std::chrono::steady_clock::now();
         cudaMemcpy(c, d_c, n1 * n3 * sizeof(float), cudaMemcpyDeviceToHost);
 
+
+        auto t2 = std::chrono::steady_clock::now();
         int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
         printf("%d\n", d1);
@@ -84,16 +87,16 @@ int main(int argc, char **argv){
         fwrite(c, 1, n1 * n3 * sizeof(float), fi);
         fclose(fi);
 
-        free(a);
-        free(b);
-        free(c);
-        cudaFree(d_a);
-        cudaFree(d_b);
-        cudaFree(d_c);
+        free(a); free(b); free(c);
+        cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
     }
     else if(mode == "gemmv1"){
         printf("The mode is gemmv1\n");
         float *d_a, *d_b, *d_c;
+        
+
+
+        auto t1 = std::chrono::steady_clock::now();
         cudaMalloc(&d_a, n1 * n2 * sizeof(float));
         cudaMalloc(&d_b, n2 * n3 * sizeof(float));
         cudaMalloc(&d_c, n1 * n3 * sizeof(float));
@@ -104,13 +107,11 @@ int main(int argc, char **argv){
         dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
         dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
 
-        // Measure the time
-        auto t1 = std::chrono::steady_clock::now();
         matrixMul1<<<gridDim, blockDim>>>(d_a, d_b, d_c, n1, n2, n3);
         cudaDeviceSynchronize();
-        auto t2 = std::chrono::steady_clock::now();
         cudaMemcpy(c, d_c, n1 * n3 * sizeof(float), cudaMemcpyDeviceToHost);
 
+        auto t2 = std::chrono::steady_clock::now();
         int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 
         printf("%d\n", d1);
@@ -118,12 +119,43 @@ int main(int argc, char **argv){
         fwrite(c, 1, n1 * n3 * sizeof(float), fi);
         fclose(fi);
 
-        free(a);
-        free(b);
-        free(c);
-        cudaFree(d_a);
-        cudaFree(d_b);
-        cudaFree(d_c);
+        free(a); free(b); free(c);
+        cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+    }
+    else if(mode == "gemmv2"){
+        int local_tile_width = 32; // Adjust this value to fit the shared memory size
+        size_t size = local_tile_width * local_tile_width * 2 * sizeof(float);
+        printf("The mode is gemmv2\n");
+        float *d_a, *d_b, *d_c;
+        
+
+        auto t1 = std::chrono::steady_clock::now();
+        cudaMalloc(&d_a, n1 * n2 * sizeof(float));
+        cudaMalloc(&d_b, n2 * n3 * sizeof(float));
+        cudaMalloc(&d_c, n1 * n3 * sizeof(float));
+
+        cudaMemcpy(d_a, a, n1 * n2 * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_b, b, n2 * n3 * sizeof(float), cudaMemcpyHostToDevice);
+
+        dim3 blockDim(local_tile_width, local_tile_width);
+        dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
+
+        matrixMul2<<<gridDim, blockDim, size>>>(d_a, d_b, d_c, n1, n2, n3, size / 2, size / 2);
+        cudaMemcpy(c, d_c, n1 * n3 * sizeof(float), cudaMemcpyDeviceToHost);
+
+        
+
+        auto t2 = std::chrono::steady_clock::now();
+        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+
+        printf("%d\n", d1);
+        fi = fopen("data/gemmv2.dat", "wb");
+        fwrite(c, 1, n1 * n3 * sizeof(float), fi);
+        fclose(fi);
+
+        free(a); free(b); free(c);
+        cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
     }
     else{
         std::cerr << "Invalid mode: " << mode << std::endl;
