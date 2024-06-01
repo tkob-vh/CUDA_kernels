@@ -5,7 +5,6 @@
  * The Block size should be equal to TILE_WIDTH x TILE_WIDTH.
 */
 
-#include<cuda_runtime.h>
 #include<gemm.hh>
 
 

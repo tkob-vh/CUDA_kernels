@@ -3,8 +3,6 @@
 #include<chrono>
 #include<string>
 #include<mkl.h>
-#include<omp.h>
-#include<cuda_runtime.h>
 #include"gemm.hh"
 
 int main(int argc, char **argv){
@@ -151,6 +149,41 @@ int main(int argc, char **argv){
 
         printf("%d\n", d1);
         fi = fopen("data/gemmv2.dat", "wb");
+        fwrite(c, 1, n1 * n3 * sizeof(float), fi);
+        fclose(fi);
+
+        free(a); free(b); free(c);
+        cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+    }
+    else if(mode == "gemmv3"){
+        int local_tile_width = 32; // Adjust this value to fit the shared memory size
+        size_t size = local_tile_width * local_tile_width * 2 * sizeof(float);
+        printf("The mode is gemmv3\n");
+        float *d_a, *d_b, *d_c;
+        
+
+        auto t1 = std::chrono::steady_clock::now();
+        cudaMalloc(&d_a, n1 * n2 * sizeof(float));
+        cudaMalloc(&d_b, n2 * n3 * sizeof(float));
+        cudaMalloc(&d_c, n1 * n3 * sizeof(float));
+
+        cudaMemcpy(d_a, a, n1 * n2 * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_b, b, n2 * n3 * sizeof(float), cudaMemcpyHostToDevice);
+
+        dim3 blockDim(local_tile_width, local_tile_width);
+        dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
+
+        matrixMul3<<<gridDim, blockDim, size>>>(d_a, d_b, d_c, n1, n2, n3, size / 2, size / 2);
+        cudaMemcpy(c, d_c, n1 * n3 * sizeof(float), cudaMemcpyDeviceToHost);
+
+        
+
+        auto t2 = std::chrono::steady_clock::now();
+        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+
+        printf("%d\n", d1);
+        fi = fopen("data/gemmv3.dat", "wb");
         fwrite(c, 1, n1 * n3 * sizeof(float), fi);
         fclose(fi);
 

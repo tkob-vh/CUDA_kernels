@@ -7,7 +7,6 @@
 */
 
 
-#include<cuda_runtime.h>
 #include<gemm.hh>
 
 __global__ void matrixMul0(float *M, float *N, float *P, int Width){
