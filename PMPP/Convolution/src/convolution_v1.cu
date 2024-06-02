@@ -14,15 +14,15 @@
  * width: The width of the input(output) 2D array.
  * height: The height of the input(output) 2D array.
 */
-__global__ void convolution_v1(float *N, float *P, int r, int width, int height){
+__global__ void convolution_v1(float *N, float *P, int width, int height){
     int Col = blockIdx.x * blockDim.x + threadIdx.x;
     int Row = blockIdx.y * blockDim.y + threadIdx.y;
 
     float Pvalue = 0.0f;
-    for(int fRow = -r; fRow <= r; fRow++){
-        for(int fCol = -r; fCol <= r; fCol++){
+    for(int fRow = -FILTER_RADIUS; fRow <= FILTER_RADIUS; fRow++){
+        for(int fCol = -FILTER_RADIUS; fCol <= FILTER_RADIUS; fCol++){
             if(Col + fCol >= 0 && Col + fCol < width && Row + fRow >= 0 && Row + fRow < height){
-                Pvalue += N[(Row + fRow) * width + Col + fCol] * F[fRow + r][fCol + r];
+                Pvalue += N[(Row + fRow) * width + Col + fCol] * F[fRow + FILTER_RADIUS][fCol + FILTER_RADIUS];
             }
         }
     }

@@ -80,7 +80,7 @@ int main(int argc, char **argv){
         dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH);
         dim3 gridDim(ceil(float(width) / BLOCK_WIDTH), ceil(float(height) / BLOCK_WIDTH));
 
-        convolution_v1<<<gridDim, blockDim>>>(d_in, d_out, r, width, height);
+        convolution_v1<<<gridDim, blockDim>>>(d_in, d_out, width, height);
         cudaDeviceSynchronize();
         cudaMemcpy(out, d_out, width * height * sizeof(float), cudaMemcpyDeviceToHost);
 
@@ -89,7 +89,7 @@ int main(int argc, char **argv){
 
         std::cout << d1 << std::endl;
 
-        fi = fopen("data/convolution_v2.dat", "wb");
+        fi = fopen("data/convolution_v1.dat", "wb");
         fwrite(out, 1, width * height * sizeof(float), fi);
         fclose(fi);
 
