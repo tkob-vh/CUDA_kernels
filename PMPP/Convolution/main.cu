@@ -98,6 +98,32 @@ int main(int argc, char **argv){
     }
     else if(mode == "v2"){
         std::cout << "The mode is v2" << std::endl;
+             
+        float *d_in, *d_out;
+        auto t1 = std::chrono::steady_clock::now();
+        cudaMalloc(&d_in, width * height * sizeof(float));
+        cudaMalloc(&d_out, width * height * sizeof(float));
+
+        cudaMemcpy(d_in, in, width * height * sizeof(float), cudaMemcpyHostToDevice);
+
+        dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH);
+        dim3 gridDim(ceil(float(width) / BLOCK_WIDTH), ceil(float(height) / BLOCK_WIDTH));
+
+        convolution_v2<<<gridDim, blockDim>>>(d_in, d_out, width, height);
+        cudaDeviceSynchronize();
+        cudaMemcpy(out, d_out, width * height * sizeof(float), cudaMemcpyDeviceToHost);
+
+        auto t2 = std::chrono::steady_clock::now();
+        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+        std::cout << d1 << std::endl;
+
+        fi = fopen("data/convolution_v2.dat", "wb");
+        fwrite(out, 1, width * height * sizeof(float), fi);
+        fclose(fi);
+
+        free(in); free(out); free(filter);
+        cudaFree(d_in); cudaFree(d_out);
     }
     else{
         std::cerr << "Invalid mode" << std::endl;
