@@ -61,6 +61,37 @@ int main(int argc, char **argv){
         free(in); free(out);
         cudaFree(d_in); cudaFree(d_out);
     }
+    else if(mode == "v1"){
+        std::cout << "The mode is v1" << std::endl;
+
+        auto t1 = std::chrono::steady_clock::now();
+        float *d_in, *d_out;
+        cudaMalloc(&d_in, nx * ny * nz * sizeof(float));
+        cudaMalloc(&d_out, nx * ny * nz * sizeof(float));
+
+        cudaMemcpy(d_in, in, nx * ny * nz * sizeof(float), cudaMemcpyHostToDevice);
+
+        dim3 blockDim(8, 8, 8);
+        dim3 gridDim(ceil((float)nx / blockDim.x), ceil((float)ny / blockDim.y), ceil((float)nz / blockDim.z));
+
+        stencil_v1<<<blockDim, gridDim>>>(d_in, d_out, nx, ny, nz);
+
+        cudaDeviceSynchronize();
+
+        cudaMemcpy(out, d_out, nx * ny * nz * sizeof(float), cudaMemcpyDeviceToHost);
+
+        auto t2 = std::chrono::steady_clock::now();
+        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+
+        std::cout << d1 << std::endl;
+
+        fi = fopen("data/stencil_v1.dat", "wb");
+        fwrite(out, 1, nx * ny * nz * sizeof(float), fi);
+        fclose(fi);
+
+        free(in); free(out);
+        cudaFree(d_in); cudaFree(d_out);
+    }
     else{
         std::cerr << "Invalid mode" << std::endl;
         return 1;
