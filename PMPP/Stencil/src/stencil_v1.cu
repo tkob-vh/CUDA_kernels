@@ -6,8 +6,7 @@
 #include "stencil.hh"
 
 // The IN_TILE_WIDTH should be the same as the block width.
-#define IN_TILE_WIDTH 8
-#define OUT_TILE_WIDTH 6
+
 
 __global__ void stencil_v1(const float *in, float *out, int nx, int ny, int nz){
     int tx = threadIdx.x; int ty = threadIdx.y; int tz = threadIdx.z;
