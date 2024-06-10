@@ -15,3 +15,5 @@ __global__ void stencil_v1(const float *in, float *out, int nx, int ny, int nz);
 #define IN_TILE_WIDTH2 32
 #define OUT_TILE_WIDTH2 30
 __global__ void stencil_v2(const float *in, float *out, int nx, int ny, int nz);
+
+__global__ void stencil_v3(const float *in, float *out, int nx, int ny, int nz);
