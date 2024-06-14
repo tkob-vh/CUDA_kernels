@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --gres=gpu:1
+#SBATCH --output=output/conway.%j.out
+
+
+echo "Starting job $SLURM_JOB_ID"
+echo ${SLURM_JOB_NODELIST}
+cat job.slurm
+
+N=${N:-"2048"}
+echo "N"
+
+. /data/spack/share/spack/setup-env.sh
+spack load intel-oneapi-compilers@2024
+spack load intel-oneapi-mkl
+spack load cmake@3.27.9
+spack load cuda@12.2.1
+
+# ./official data/input.dat data/official.dat 2048
+
+./answer data/input.dat data/answer.dat $N
