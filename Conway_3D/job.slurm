@@ -7,8 +7,10 @@ echo "Starting job $SLURM_JOB_ID"
 echo ${SLURM_JOB_NODELIST}
 cat job.slurm
 
-N=${N:-"2048"}
-echo "N"
+N=${N:="2048"}
+case=${case:="answer"}
+echo "$N"
+echo "$case"
 
 . /data/spack/share/spack/setup-env.sh
 spack load intel-oneapi-compilers@2024
@@ -18,4 +20,7 @@ spack load cuda@12.2.1
 
 # ./official data/input.dat data/official.dat 2048
 
-./answer data/input.dat data/answer.dat $N
+./$case data/input.dat data/$case.dat $N
+
+cmp data/ref.dat data/$case.dat
+echo "===============================output============================"
