@@ -11,7 +11,7 @@
 #define BLOCK_WIDTH 32
 #define INPUT_TILE BLOCK_WIDTH
 #define OUTPUT_TILE 30
-#define Z_ITER OUTPUT_TILE
+#define Z_ITER 15
 
 namespace fs = std::filesystem;
 
@@ -34,17 +34,18 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
 
   int mj = ((j + M) % M) * M; 
   int mk = (k + M) % M;
+  int M2 = M * M;
 
-  curr_space_fro_s[ty][tx] = curr_space[((iStart + M - 1) % M) * M * M + mj + mk];
-  curr_space_mid_s[ty][tx] = curr_space[iStart * M * M + mj + mk];
+  curr_space_fro_s[ty][tx] = curr_space[((iStart + M - 1) % M) * M2 + mj + mk];
+  curr_space_mid_s[ty][tx] = curr_space[iStart * M2 + mj + mk];
 
   for(int i = iStart; i < iStart + Z_ITER; i++) {
-    curr_space_end_s[ty][tx] = curr_space[((i + 1) % M) * M * M + mj + mk];
+    curr_space_end_s[ty][tx] = curr_space[((i + 1) % M) * M2 + mj + mk];
 
     __syncthreads();
 
-    if(i >= 0 && i < M && j >= 0 && j < M && k >= 0 && k < M) {
-      if(tx >= 1 && tx < INPUT_TILE - 1 && ty >= 1 && ty < INPUT_TILE - 1) {
+    if((unsigned int)(i - 0) < M && (unsigned int)(j - 0) < M && (unsigned int)(k - 0) < M && 
+       (unsigned int)(tx - 1) < INPUT_TILE - 2 && (unsigned int)(ty - 1) < INPUT_TILE - 2 ) {
         uint8_t neighbor_count = curr_space_mid_s[ty - 1][tx - 1] + curr_space_mid_s[ty - 1][tx]
                                + curr_space_mid_s[ty - 1][tx + 1] + curr_space_mid_s[ty][tx - 1]
                                + curr_space_mid_s[ty][tx + 1] + curr_space_mid_s[ty + 1][tx - 1]
@@ -60,7 +61,7 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
                                + curr_space_end_s[ty + 1][tx] + curr_space_end_s[ty + 1][tx + 1];
 
         uint8_t curr_state = curr_space_mid_s[ty][tx];
-        uint8_t &next_state = next_space[i * M * M + j * M + k];  // Corrected to use correct indexing                        
+        uint8_t &next_state = next_space[i * M2 + mj + mk];  // Corrected to use correct indexing                        
 
         if(curr_state == 1) {
           if(neighbor_count < 5 || neighbor_count > 7) next_state = 0;
@@ -69,7 +70,7 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
           if(neighbor_count == 6) next_state = 1;
           else next_state = 0;
         }
-      }
+
     }
 
     __syncthreads();
