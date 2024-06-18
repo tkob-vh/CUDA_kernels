@@ -9,8 +9,8 @@ cat job.slurm
 
 N=${N:="2048"}
 case=${case:="answer"}
-echo "$N"
-echo "$case"
+echo "iterations: $N"
+echo "case: $case"
 
 . /data/spack/share/spack/setup-env.sh
 spack load intel-oneapi-compilers@2024
@@ -22,5 +22,5 @@ spack load cuda@12.2.1
 
 ./$case data/input.dat data/$case.dat $N
 
-cmp data/ref.dat data/$case.dat
-echo "===============================output============================"
+echo "errors: $(cmp data/baseline.dat data/$case.dat -l | wc -l)"
+# ===============================output============================

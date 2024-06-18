@@ -9,53 +9,74 @@
 #include <cuda_runtime.h>
 
 #define BLOCK_WIDTH 32
-#define Z_ITER 32
+#define INPUT_TILE BLOCK_WIDTH
+#define OUTPUT_TILE 30
+#define Z_ITER OUTPUT_TILE
+
 namespace fs = std::filesystem;
 
 __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) {
+  __shared__ uint8_t curr_space_fro_s[INPUT_TILE][INPUT_TILE];
+  __shared__ uint8_t curr_space_mid_s[INPUT_TILE][INPUT_TILE];
+  __shared__ uint8_t curr_space_end_s[INPUT_TILE][INPUT_TILE];
 
-  int i = blockDim.z * blockIdx.z + threadIdx.z;
-  int j = blockDim.y * blockIdx.y + threadIdx.y;
-  int k = blockDim.x * blockIdx.x + threadIdx.x;
+  int tx = threadIdx.x;
+  int ty = threadIdx.y;
+  
+  // Initialize the shared memory
+  curr_space_fro_s[ty][tx] = 0;
+  curr_space_mid_s[ty][tx] = 0;
+  curr_space_end_s[ty][tx] = 0;
 
-  int li = (i + M - 1) % M * M * M;
-  int mi = i * M * M;
-  int ri = (i + 1) % M * M * M;
+  int iStart = Z_ITER * blockIdx.z; // the start index of the output_tile in z axis.
+  int j = OUTPUT_TILE * blockIdx.y + ty - 1;
+  int k = OUTPUT_TILE * blockIdx.x + tx - 1;
 
-  int lj = (j + M - 1) % M * M;
-  int mj = j * M;
-  int rj = (j + 1) % M * M;
+  int mj = ((j + M) % M) * M; 
+  int mk = (k + M) % M;
 
-  int lk = (k + M - 1) % M;
-  int mk = k;
-  int rk = (k + 1) % M;
+  curr_space_fro_s[ty][tx] = curr_space[((iStart + M - 1) % M) * M * M + mj + mk];
+  curr_space_mid_s[ty][tx] = curr_space[iStart * M * M + mj + mk];
 
-  uint8_t curr_state = curr_space[mi + mj + mk];
-  uint8_t &next_state = next_space[mi + mj + mk];
+  for(int i = iStart; i < iStart + Z_ITER; i++) {
+    curr_space_end_s[ty][tx] = curr_space[((i + 1) % M) * M * M + mj + mk];
 
-  uint8_t neighbor_count = curr_space[li + lj + lk] + curr_space[li + lj + mk] +
-                          curr_space[li + lj + rk] + curr_space[li + mj + lk] +
-                          curr_space[li + mj + mk] + curr_space[li + mj + rk] +
-                          curr_space[li + rj + lk] + curr_space[li + rj + mk] +
-                          curr_space[li + rj + rk] + curr_space[mi + lj + lk] +
-                          curr_space[mi + lj + mk] + curr_space[mi + lj + rk] +
-                          curr_space[mi + mj + lk] + curr_space[mi + mj + rk] +
-                          curr_space[mi + rj + lk] + curr_space[mi + rj + mk] +
-                          curr_space[mi + rj + rk] + curr_space[ri + lj + lk] +
-                          curr_space[ri + lj + mk] + curr_space[ri + lj + rk] +
-                          curr_space[ri + mj + lk] + curr_space[ri + mj + mk] +
-                          curr_space[ri + mj + rk] + curr_space[ri + rj + lk] +
-                          curr_space[ri + rj + mk] + curr_space[ri + rj + rk];
+    __syncthreads();
 
-  if(curr_state == 1) {
-    if(neighbor_count < 5 || neighbor_count > 7) next_state = 0;
-    else next_state = 1;
+    if(i >= 0 && i < M && j >= 0 && j < M && k >= 0 && k < M) {
+      if(tx >= 1 && tx < INPUT_TILE - 1 && ty >= 1 && ty < INPUT_TILE - 1) {
+        uint8_t neighbor_count = curr_space_mid_s[ty - 1][tx - 1] + curr_space_mid_s[ty - 1][tx]
+                               + curr_space_mid_s[ty - 1][tx + 1] + curr_space_mid_s[ty][tx - 1]
+                               + curr_space_mid_s[ty][tx + 1] + curr_space_mid_s[ty + 1][tx - 1]
+                               + curr_space_mid_s[ty + 1][tx] + curr_space_mid_s[ty + 1][tx + 1]
+                               + curr_space_fro_s[ty - 1][tx - 1] + curr_space_fro_s[ty - 1][tx]
+                               + curr_space_fro_s[ty - 1][tx + 1] + curr_space_fro_s[ty][tx - 1]
+                               + curr_space_fro_s[ty][tx] + curr_space_fro_s[ty][tx + 1]
+                               + curr_space_fro_s[ty + 1][tx - 1] + curr_space_fro_s[ty + 1][tx]
+                               + curr_space_fro_s[ty + 1][tx + 1] + curr_space_end_s[ty - 1][tx - 1]
+                               + curr_space_end_s[ty - 1][tx] + curr_space_end_s[ty - 1][tx + 1]
+                               + curr_space_end_s[ty][tx - 1] + curr_space_end_s[ty][tx]
+                               + curr_space_end_s[ty][tx + 1] + curr_space_end_s[ty + 1][tx - 1]
+                               + curr_space_end_s[ty + 1][tx] + curr_space_end_s[ty + 1][tx + 1];
+
+        uint8_t curr_state = curr_space_mid_s[ty][tx];
+        uint8_t &next_state = next_space[i * M * M + j * M + k];  // Corrected to use correct indexing                        
+
+        if(curr_state == 1) {
+          if(neighbor_count < 5 || neighbor_count > 7) next_state = 0;
+          else next_state = 1;
+        } else {
+          if(neighbor_count == 6) next_state = 1;
+          else next_state = 0;
+        }
+      }
+    }
+
+    __syncthreads();
+
+    curr_space_fro_s[ty][tx] = curr_space_mid_s[ty][tx];
+    curr_space_mid_s[ty][tx] = curr_space_end_s[ty][tx];
   }
-  else {
-    if(neighbor_count == 6) next_state = 1;
-    else next_state = 0;
-  }
-
 }
 
 int main(int argc, char *argv[]) {
@@ -88,29 +109,24 @@ int main(int argc, char *argv[]) {
   cudaMalloc(&next_space_d, M3 * sizeof(uint8_t));
   cudaMemcpy(curr_space_d, curr_space, M3 * sizeof(uint8_t), cudaMemcpyHostToDevice);
 
-  dim3 blockDim(16, 8, 8);
-  dim3 gridDim(ceil((float) M / blockDim.x), ceil((float) M / blockDim.y), ceil((float) M / blockDim.z));
-  // dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
-  // dim3 gridDim(ceil((float) M / blockDim.x), ceil((float) M / blockDim.y), ceil((float) M / Z_ITER));
-
+  dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH, 1);
+  dim3 gridDim(ceil((float) M / OUTPUT_TILE), ceil((float) M / OUTPUT_TILE), ceil((float) M / Z_ITER));
 
   auto t1 = std::chrono::steady_clock::now();
 
-  for(int i = 0; i < N; i++){
+  for(int i = 0; i < N; i++) {
     conway_step<<<gridDim, blockDim>>>(curr_space_d, next_space_d, M);
-    #ifdef DEBUG
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess) {
       std::cerr << "CUDA kernel launched failed: " << cudaGetErrorString(error) << std::endl;
     }
-    #endif
     cudaDeviceSynchronize();
     std::swap(curr_space_d, next_space_d);
   }
 
   auto t2 = std::chrono::steady_clock::now();
   cudaMemcpy(curr_space, curr_space_d, M3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
-
+  
   T += N;
   std::ofstream output_file(output_path, std::ios::binary);
   output_file.write(reinterpret_cast<char *>(&M), sizeof(M));
