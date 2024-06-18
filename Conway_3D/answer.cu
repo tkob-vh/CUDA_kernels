@@ -8,10 +8,10 @@
 #include <chrono>
 #include <cuda_runtime.h>
 
-#define BLOCK_WIDTH 32
+#define BLOCK_WIDTH 16
 #define INPUT_TILE BLOCK_WIDTH
-#define OUTPUT_TILE 30
-#define Z_ITER 15
+#define OUTPUT_TILE 14
+#define Z_ITER 14
 
 namespace fs = std::filesystem;
 
@@ -32,15 +32,14 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
   int j = OUTPUT_TILE * blockIdx.y + ty - 1;
   int k = OUTPUT_TILE * blockIdx.x + tx - 1;
 
-  int mj = ((j + M) % M) * M; 
-  int mk = (k + M) % M;
+  int mj_k = ((j + M) % M) * M + (k + M) % M; 
   int M2 = M * M;
 
-  curr_space_fro_s[ty][tx] = curr_space[((iStart + M - 1) % M) * M2 + mj + mk];
-  curr_space_mid_s[ty][tx] = curr_space[iStart * M2 + mj + mk];
+  curr_space_fro_s[ty][tx] = curr_space[((iStart + M - 1) % M) * M2 + mj_k];
+  curr_space_mid_s[ty][tx] = curr_space[iStart * M2 + mj_k];
 
   for(int i = iStart; i < iStart + Z_ITER; i++) {
-    curr_space_end_s[ty][tx] = curr_space[((i + 1) % M) * M2 + mj + mk];
+    curr_space_end_s[ty][tx] = curr_space[((i + 1) % M) * M2 + mj_k];
 
     __syncthreads();
 
@@ -61,7 +60,7 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
                                + curr_space_end_s[ty + 1][tx] + curr_space_end_s[ty + 1][tx + 1];
 
         uint8_t curr_state = curr_space_mid_s[ty][tx];
-        uint8_t &next_state = next_space[i * M2 + mj + mk];  // Corrected to use correct indexing                        
+        uint8_t &next_state = next_space[i * M2 + mj_k];  // Corrected to use correct indexing                        
 
         if(curr_state == 1) {
           if(neighbor_count < 5 || neighbor_count > 7) next_state = 0;
