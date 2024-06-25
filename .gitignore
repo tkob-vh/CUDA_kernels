@@ -9,3 +9,4 @@
 build/
 output/
 .vscode/
+profiling_results/
