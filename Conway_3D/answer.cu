@@ -114,16 +114,16 @@ int main(int argc, char *argv[]) {
 
   auto t1 = std::chrono::steady_clock::now();
 
-  for(int i = 0; i < N; i++) {
+  for(int i = 0; i < N / 2; i++) {
     conway_step<<<gridDim, blockDim>>>(curr_space_d, next_space_d, M);
+    conway_step<<<gridDim, blockDim>>>(next_space_d, curr_space_d, M);
     cudaError_t error = cudaGetLastError();
     if(error != cudaSuccess) {
       std::cerr << "CUDA kernel launched failed: " << cudaGetErrorString(error) << std::endl;
     }
-    cudaDeviceSynchronize();
-    std::swap(curr_space_d, next_space_d);
   }
 
+  cudaDeviceSynchronize();
   auto t2 = std::chrono::steady_clock::now();
   cudaMemcpy(curr_space, curr_space_d, M3 * sizeof(uint8_t), cudaMemcpyDeviceToHost);
   
