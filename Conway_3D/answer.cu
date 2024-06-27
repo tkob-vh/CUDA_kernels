@@ -23,10 +23,6 @@ __global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t M) 
   int tx = threadIdx.x;
   int ty = threadIdx.y;
   
-  // Initialize the shared memory
-  curr_space_fro_s[ty][tx] = 0;
-  curr_space_mid_s[ty][tx] = 0;
-  curr_space_end_s[ty][tx] = 0;
 
   int iStart = Z_ITER * blockIdx.z; // the start index of the output_tile in z axis.
   int j = OUTPUT_TILE * blockIdx.y + ty - 1;
