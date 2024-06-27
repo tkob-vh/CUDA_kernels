@@ -31,27 +31,31 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
 
   uint32_t count[Z_WIDTH + 2]; // Store the number of alive cells in the 3 * 4 cells near the target cell.
 
+  #pragma unroll
   for(int i = 0; i < Z_WIDTH + 2; i++) { // Iterate through z axis.
     int zCurr = (zStart * Z_WIDTH + i - 1 + M) % M;
 
     count[i] = 0;
+    #pragma unroll
     for(int j = 0; j < 3; j++) { // Iterate through y axis.
       count[i] += curr_space[(zCurr * M + y_index[j]) * width + tx];
     }
   }
 
   // Load the input cell into shared memory
+  #pragma unroll
   for(int i = 0; i < Z_WIDTH; i++) {
     src[i * width + tx] = curr_space[(zStart * Z_WIDTH + i) * width * M + y * width + tx];
   }
 
-  __syncthreads();
   // Calculate the number of alive cells across 3 z indexs. Finally we get the number of alive cells for each Z_WIDTH cell without considering its x-axis neighbors.
+  #pragma unroll
   for(int i = 0; i < Z_WIDTH; i++) {
     count[i] = count[i] + count[i + 1] + count[i + 2];
   }
 
   // Load the count array from local memory to shared memory.
+  #pragma unroll
   for(int i = 0; i < Z_WIDTH; i++) {
     input[i * (width + 2) + tx + 1] = count[i];
   }
@@ -74,10 +78,10 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
     uint32_t right = input[i * (width + 2) + tx + 2];
     center = center + (center >> 8) + (right << 24) + (center << 8) + (left >> 24);
 
+    #pragma unroll
     for(int j = 0; j < 4; j++) {
       uint32_t c = center & 0xff;
       center = center >> 8;
-
       if(c == 6 || 6 <= c && c <= 8 && src_[(i * width + tx) * 4 + j]) {
         tempout[j] = 1;
       }
