@@ -13,7 +13,7 @@
 namespace fs = std::filesystem;
 
 
-__global__ void conway_step(uint8_t *curr_space, uint8_t *next_space, size_t width, size_t M) {
+__global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t width, size_t M) {
   extern __shared__ char inputs[];
   uint32_t *src = (uint32_t *)inputs; // One uint32_t stores 4 cells in the x axis.
   uint32_t *input = (uint32_t *)(inputs + width * Z_WIDTH * sizeof(uint32_t));
@@ -113,18 +113,18 @@ int main(int argc, char *argv[]) {
 
   size_t M3 = M * M * M;
 
-  uint8_t *curr_space = new uint8_t[M3];
-  uint8_t *next_space = new uint8_t[M3];
+  uint32_t *curr_space = new uint32_t[M3];
+  uint32_t *next_space = new uint32_t[M3];
 
   input_file.read(reinterpret_cast<char *>(curr_space), M3);
 
   cudaError_t err;
-  uint8_t *curr_space_d, *next_space_d;
-  err = cudaMalloc(&curr_space_d, M3 * sizeof(uint8_t));
+  uint32_t *curr_space_d, *next_space_d;
+  err = cudaMalloc((void **)&curr_space_d, M3 * sizeof(uint8_t));
   if(err != cudaSuccess) {
     std::cerr << cudaGetErrorString(err) << std::endl;
   }
-  err = cudaMalloc(&next_space_d, M3 * sizeof(uint8_t));
+  err = cudaMalloc((void **)&next_space_d, M3 * sizeof(uint8_t));
   if(err != cudaSuccess) {
     std::cerr << cudaGetErrorString(err) << std::endl;
   }
