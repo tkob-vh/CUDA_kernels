@@ -8,8 +8,10 @@ echo "Starting job $SLURM_JOB_ID"
 echo ${SLURM_JOB_NODELIST}
 cat job.slurm
 
+M=${M:="1024"}
 N=${N:="1024"}
 case=${case:="answer"}
+echo "M: $M"
 echo "iterations: $N"
 echo "case: $case"
 
@@ -20,7 +22,7 @@ spack load cmake@3.27.9
 spack load cuda@12.2.1
 
 
-./$case data/input.dat data/$case.dat $N
+./$case data/input_$M.dat data/${case}_${M}.dat $N
 
 
 # nsys profile --trace=cuda,nvtx \
@@ -33,5 +35,5 @@ spack load cuda@12.2.1
 #            ./profiling_results/${SLURM_JOB_ID}.nsys-rep
 
 
-echo "errors: $(cmp data/official.dat data/$case.dat -l | wc -l)"
+echo "errors: $(cmp data/official_$M.dat data/${case}_${M}.dat -l | wc -l)"
 # ===============================output============================
