@@ -14,9 +14,9 @@ namespace fs = std::filesystem;
 
 
 __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t width, size_t M) {
-  extern __shared__ char inputs[];
-  uint32_t *src = (uint32_t *)inputs; // One uint32_t stores 4 cells in the x axis.
-  uint32_t *input = (uint32_t *)(inputs + width * Z_WIDTH * sizeof(uint32_t));
+  extern __shared__ uint32_t shared[];
+  uint32_t *src = (uint32_t *)shared; // One uint32_t stores 4 cells in the x axis.
+  uint32_t *neighbor_count = (uint32_t *)(shared + width * Z_WIDTH);
   uint8_t *src_ = (uint8_t*)src;
 
   int y = blockIdx.y;
@@ -57,15 +57,15 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
   // Load the count array from local memory to shared memory.
   #pragma unroll
   for(int i = 0; i < Z_WIDTH; i++) {
-    input[i * (width + 2) + tx + 1] = count[i];
+    neighbor_count[i * (width + 2) + tx + 1] = count[i];
   }
 
   __syncthreads();
 
   // Load the count array for the cells in the near the halo.
   if(tx < Z_WIDTH) {
-    input[tx * (width + 2)] = input[tx * (width + 2) + width];
-    input[tx * (width + 2) + (width + 1)] = input[tx * (width + 2) + 1];
+    neighbor_count[tx * (width + 2)] = neighbor_count[tx * (width + 2) + width];
+    neighbor_count[tx * (width + 2) + (width + 1)] = neighbor_count[tx * (width + 2) + 1];
   }
 
   __syncthreads();
@@ -73,9 +73,9 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
   uint32_t tempout[4];
   for(int i = 0; i < Z_WIDTH; i++) {
     // 
-    uint32_t left = input[i * (width + 2) + tx];
-    uint32_t center = input[i * (width + 2) + tx + 1];
-    uint32_t right = input[i * (width + 2) + tx + 2];
+    uint32_t left = neighbor_count[i * (width + 2) + tx];
+    uint32_t center = neighbor_count[i * (width + 2) + tx + 1];
+    uint32_t right = neighbor_count[i * (width + 2) + tx + 2];
     center = center + (center >> 8) + (right << 24) + (center << 8) + (left >> 24);
 
     #pragma unroll
