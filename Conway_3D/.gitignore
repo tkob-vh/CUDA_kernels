@@ -1,7 +1,10 @@
 test*
 generate
 official
-answer
+answer_v0
+answer_v1
+answer_v2
+answer_v3
 baseline
 improve_naive
 improve

@@ -20,7 +20,7 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
   uint8_t *src_ = (uint8_t*)src;
 
   int y = blockIdx.y;
-  int zStart = blockIdx.z; // One thread is responsible for Z_WIDTH cells starting at zStart in the z axis.
+  int zStart = blockIdx.z * Z_WIDTH; // One thread is responsible for Z_WIDTH cells starting at zStart in the z axis.
   int tx = threadIdx.x;
 
   // Calculate the y index needed for the 4 cells in one thread.
@@ -33,7 +33,7 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
 
   #pragma unroll
   for(int i = 0; i < Z_WIDTH + 2; i++) { // Iterate through z axis.
-    int zCurr = (zStart * Z_WIDTH + i - 1 + M) % M;
+    int zCurr = (zStart + i - 1 + M) % M;
 
     count[i] = 0;
     #pragma unroll
@@ -45,7 +45,7 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
   // Load the input cell into shared memory
   #pragma unroll
   for(int i = 0; i < Z_WIDTH; i++) {
-    src[i * width + tx] = curr_space[(zStart * Z_WIDTH + i) * width * M + y * width + tx];
+    src[i * width + tx] = curr_space[(zStart + i) * width * M + y * width + tx];
   }
 
   // Calculate the number of alive cells across 3 z indexs. Finally we get the number of alive cells for each Z_WIDTH cell without considering its x-axis neighbors.
@@ -91,7 +91,7 @@ __global__ void conway_step(uint32_t *curr_space, uint32_t *next_space, size_t w
     }
 
     uint32_t out = tempout[0] + (tempout[1] << 8) + (tempout[2] << 16) + (tempout[3] << 24);
-    next_space[((zStart * Z_WIDTH + i) * M + y) * width + tx] = out;
+    next_space[((zStart + i) * M + y) * width + tx] = out;
 
   }
 
