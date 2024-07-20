@@ -1,10 +1,10 @@
 /* 
- * histogram_v2.cu
- * Tricks: Shared Memory, Privatization and Thread Coarsening.
+ * histogram_v3.cu
+ * Tricks: Shared Memory, Privatization, Thread Coarsening and Aggregation.
  */
 #include "histogram.hh"
 
-__global__ void histogram_v2(char *data, unsigned int length,
+__global__ void histogram_v3(char *data, unsigned int length,
                                 unsigned int *histo){
 
     __shared__ unsigned int histo_s[NUM_BINS];
@@ -13,15 +13,30 @@ __global__ void histogram_v2(char *data, unsigned int length,
     // Initialize the histo in shared memory(Robust version)
     for(unsigned int bin = threadIdx.x; bin < NUM_BINS; bin += blockDim.x)
         histo_s[bin] = 0u;
+
+    unsigned int accumulator = 0;
+    int prevBinIdx = -1;
     __syncthreads();
+        
 
     unsigned int tid = blockDim.x * blockIdx.x * CORASE_SIZE + threadIdx.x;
     for(unsigned int i = tid; i < min(length, tid + blockDim.x * 
-        CORASE_SIZE); i += blockDim.x) {
+            CORASE_SIZE); i += blockDim.x) {
         int alphabet_position = data[i] - 'a';
-        if(alphabet_position >= 0 && alphabet_position < 26) {
-            atomicAdd(&histo_s[alphabet_position/4], 1);
+        int bin = alphabet_position / 4;
+        if(bin == prevBinIdx) {
+            accumulator++;
         }
+        else {
+            if(accumulator > 0) {
+                atomicAdd(&histo_s[prevBinIdx], accumulator);
+            }
+            accumulator = 1;
+            prevBinIdx = bin;
+        }
+    }
+    if(accumulator > 0) {
+        atomicAdd(&histo_s[prevBinIdx], accumulator);
     }
     __syncthreads();
 

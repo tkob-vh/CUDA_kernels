@@ -5,11 +5,11 @@
 #include "histogram.hh"
 
 __global__ void histogram_v1(char *data, unsigned int length, unsigned int *histo){
-    __shared__ unsigned int histo_s[BUCKET];
-    // if(threadIdx.x < BUCKET)
+    __shared__ unsigned int histo_s[NUM_BINS];
+    // if(threadIdx.x < NUM_BINS)
     //     histo_s[threadIdx.x] = 0u;
     // Initialize the histo in shared memory(Robust version)
-    for(unsigned int bin = threadIdx.x; bin < BUCKET; bin += blockDim.x)
+    for(unsigned int bin = threadIdx.x; bin < NUM_BINS; bin += blockDim.x)
         histo_s[bin] = 0u;
     __syncthreads();
 
@@ -22,7 +22,7 @@ __global__ void histogram_v1(char *data, unsigned int length, unsigned int *hist
     }
     __syncthreads();
 
-    for(unsigned int bin = threadIdx.x; bin < BUCKET; bin += blockDim.x){
+    for(unsigned int bin = threadIdx.x; bin < NUM_BINS; bin += blockDim.x){
         unsigned int num = histo_s[bin];
         if(num > 0) atomicAdd(&histo[bin], num);
     }
