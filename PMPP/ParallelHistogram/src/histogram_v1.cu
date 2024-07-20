@@ -1,6 +1,6 @@
 /* 
  * histogram_v1.cu
- * A parallel histogram kernel using shared memory and privatization.
+ * Tricks: Shared Memory, Privatization.
  */
 #include "histogram.hh"
 

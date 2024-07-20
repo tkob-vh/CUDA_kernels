@@ -39,13 +39,15 @@ int main(int argc, char **argv){
         dim3 blockDim(1024, 1, 1);
         dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
 
-        histogram_v0<<<blockDim, gridDim>>>(in_d, length, histo_d);
+        histogram_v0<<<gridDim, blockDim>>>(in_d, length, histo_d);
         cudaDeviceSynchronize();
 
-        cudaMemcpy(histo, histo_d, BUCKET * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+        cudaMemcpy(histo, histo_d, BUCKET * sizeof(unsigned int),
+                    cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
-        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+        int d1 = std::chrono::duration_cast
+                            <std::chrono::milliseconds>(t2 - t1).count();
 
         std::cout << d1 << std::endl;
 
@@ -71,18 +73,50 @@ int main(int argc, char **argv){
         dim3 blockDim(1024, 1, 1);
         dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
 
-        histogram_v1<<<blockDim, gridDim>>>(in_d, length, histo_d);
-        cudaMemcpy(histo, histo_d, BUCKET * sizeof(unsigned int), cudaMemcpyDeviceToHost);
+        histogram_v1<<<gridDim, blockDim>>>(in_d, length, histo_d);
+        cudaMemcpy(histo, histo_d, BUCKET * sizeof(unsigned int),
+                    cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
 
-        int d1 = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+        int d1 = std::chrono::duration_cast
+                            <std::chrono::milliseconds>(t2 - t1).count();
 
         std::cout << d1 << std::endl;
 
         for(int i = 0; i < BUCKET; i++){
             std::cout << histo[i] << std::endl;
         }
+        free(in);
+        cudaFree(in_d); cudaFree(histo_d);
+    }
+    else if(mode == "v2") {
+        std::cout << "The mode is v2" << std::endl;
+
+        auto t1 = std::chrono::steady_clock::now();
+        char *in_d;
+        unsigned int  *histo_d;
+
+        cudaMalloc(&in_d, length * sizeof(char));
+        cudaMalloc(&histo_d, BUCKET * sizeof(unsigned int));
+
+        dim3 blockDim(1024, 1, 1);
+        dim3 gridDim(ceil(float(length)/ (blockDim.x * CORASE_SIZE) ), 1, 1);
+
+        histogram_v2<<<gridDim, blockDim>>>(in_d, length, histo_d);
+        cudaMemcpy(histo, histo_d, BUCKET * sizeof(unsigned int),
+                    cudaMemcpyDeviceToHost);
+
+        auto t2 = std::chrono::steady_clock::now();
+
+        int d1 = std::chrono::duration_cast
+                            <std::chrono::milliseconds>(t2 - t1).count();
+
+        std::cout << d1 << std::endl;
+        for(int i = 0; i < BUCKET; i++) {
+            std::cout << histo[i] << std::endl;
+        }
+
         free(in);
         cudaFree(in_d); cudaFree(histo_d);
     }
