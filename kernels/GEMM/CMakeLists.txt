@@ -24,7 +24,7 @@ include_directories(${MKL_INCLUDE_DIRS})
 
 
 file(GLOB SOURCES ${PROJECT_SOURCE_DIR}/src/*)
-list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/main.cu)
+list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/main.cc)
 
 
 add_executable(CUDA_GEMM ${SOURCES})

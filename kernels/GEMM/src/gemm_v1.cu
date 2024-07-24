@@ -8,7 +8,7 @@
 #include<gemm.hh>
 
 
-__global__ void matrixMul1(float *M, float *N, float *P, int r, int s, int t){
+__global__ void gemm_v1(float *M, float *N, float *P, int r, int s, int t) {
     __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
     __shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
@@ -41,4 +41,15 @@ __global__ void matrixMul1(float *M, float *N, float *P, int r, int s, int t){
 
     if(Row < r && Col < t)
         P[Row * t + Col] = Pvalue;
+}
+
+
+void gemm_v1_invok(uint32_t n1, uint32_t n2, uint32_t n3,
+                    float *a, float *b, float *c) {
+    dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
+    dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
+
+    gemm_v1<<<gridDim, blockDim>>>(a, b, c, n1, n2, n3);
+    cudaDeviceSynchronize();
+
 }

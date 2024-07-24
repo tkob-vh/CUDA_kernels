@@ -9,16 +9,18 @@
 
 #include<gemm.hh>
 
-__global__ void matrixMul0(float *M, float *N, float *P, int Width){
+__global__ void gemm_v0(float *M, float *N, float *P, int Width){
 
-    // Use shared memory to store the sub-matrices of M and N, which improves compute density and reduces the number of global memory accesses.
+    // Use shared memory to store the sub-matrices of M and N, which improves 
+    // compute density and reduces the number of global memory accesses.
     __shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
     __shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
     int bx = blockIdx.x; int by = blockIdx.y;
     int tx = threadIdx.x; int ty = threadIdx.y;
 
-    // The Row and Column of the current thread which is responsible for computing its Pvalue[Col][Row]
+    // The Row and Column of the current thread which is responsible for 
+    // computing its Pvalue[Col][Row]
     int Row = by * TILE_WIDTH + ty;
     int Col = bx * TILE_WIDTH + tx;
 
@@ -45,5 +47,17 @@ __global__ void matrixMul0(float *M, float *N, float *P, int Width){
 
     if(Row < Width && Col < Width)
         P[Row * Width + Col] = Pvalue;
+
+}
+
+
+void gemm_v0_invok(uint32_t n1, uint32_t n2, uint32_t n3,
+                    float *a, float *b, float *c) {
+
+    dim3 blockDim(TILE_WIDTH, TILE_WIDTH);
+    dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
+
+    gemm_v0<<<gridDim, blockDim>>>(a, b, c, n1);
+    cudaDeviceSynchronize();
 
 }

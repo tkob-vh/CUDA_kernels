@@ -7,7 +7,8 @@
 #include"gemm.hh"
 
 
-__global__ void matrixMul2(float *M, float *N, float *P, int r, int s, int t, unsigned int Mds_sz, unsigned int Nds_sz){
+__global__ void gemm_v2(float *M, float *N, float *P, int r, int s, int t, 
+                        unsigned int Mds_sz, unsigned int Nds_sz) {
     
     extern __shared__ char Mds_Nds[];
 
@@ -44,4 +45,20 @@ __global__ void matrixMul2(float *M, float *N, float *P, int r, int s, int t, un
 
     if(Row < r && Col < t)
         P[Row * t + Col] = Pvalue;
+}
+
+
+void gemm_v2_invok(uint32_t n1, uint32_t n2, uint32_t n3,
+                    float *a, float *b, float *c) {
+
+    // Adjust this value to fit the shared memory size
+    int local_tile_width = 32; 
+    size_t size = local_tile_width * local_tile_width * 2 * sizeof(float);
+
+    dim3 blockDim(local_tile_width, local_tile_width);
+    dim3 gridDim(ceil((float)n3 / blockDim.x), ceil((float)n1 / blockDim.y));
+
+    gemm_v2<<<gridDim, blockDim, size>>>(a, b, c, n1, n2, n3, 
+                                        size / 2, size / 2);
+
 }
