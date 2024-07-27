@@ -21,3 +21,16 @@ __global__ void stencil_v0(const float *in, float *out, int nx, int ny, int nz){
                                     +   c6 * in[gx + gy*nx + (gz+1)*nx*ny];
     }
 }
+
+void stencil_v0_invok(uint32_t nx, uint32_t ny, uint32_t nz,
+                        float *in, float *out) {
+
+        dim3 blockDim(IN_TILE_WIDTH, IN_TILE_WIDTH, IN_TILE_WIDTH);
+        dim3 gridDim(ceil((float)nx / blockDim.x),
+                    ceil((float)ny / blockDim.y),
+                    ceil((float)nz / blockDim.z));
+
+        stencil_v0<<<blockDim, gridDim>>>(in, out, nx, ny, nz);
+
+        cudaDeviceSynchronize();
+}

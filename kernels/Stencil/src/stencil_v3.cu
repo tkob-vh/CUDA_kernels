@@ -22,22 +22,30 @@ __global__ void stencil_v3(const float *in, float *out, int nx, int ny, int nz){
     float inNext;
 
     //Initialize the shared memory(The first 2 tiles)
-    if(iStart >= 1 && iStart < nz + 1 && j >= 0 && j < ny && k >= 0 && k < nx){ // If the first tile is not out of bound.
+    if(iStart >= 1 && iStart < nz + 1 && j >= 0 && j < ny && k >= 0 && k < nx){
+        // If the first tile is not out of bound.
         inPrev = in[(iStart - 1) * nx * ny + j * nx + k];
     }
-    if(iStart >= 0 && iStart < nz && j >= 0 && j < ny && k >= 0 && k < nx){  // If the second tile is not out of bound.
+    if(iStart >= 0 && iStart < nz && j >= 0 && j < ny && k >= 0 && k < nx){ 
+        // If the second tile is not out of bound.
         inCurr = in[iStart * nx * ny + j * nx + k];
         inCurr_s[ty][tx] = inCurr;
     }
     
     for(int p = iStart; p < iStart + OUT_TILE_WIDTH2; p++){
-        if(p >= -1 && p < nz - 1 && j >= 0 && j < ny && k >= 0 && k < nx){  // The third tile
+        if(p >= -1 && p < nz - 1 && j >= 0 && j < ny && k >= 0 && k < nx){  
+            // The third tile
             inNext = in[(p + 1) * nx * ny + j * nx + k];
         }
         __syncthreads();
 
-        if(p >= 1 && p < nz - 1 && j >= 1 && j < ny - 1 && k >= 1 && k < nx - 1){ // Skip the boundry.
-            if(tx >= 1 && tx < IN_TILE_WIDTH2 - 1 && ty >= 1 && ty < IN_TILE_WIDTH2 - 1){ // Only compute the output tile region
+        if(p >= 1 && p < nz - 1
+            && j >= 1 && j < ny - 1
+            && k >= 1 && k < nx - 1){ 
+            // Skip the boundry.
+            if(tx >= 1 && tx < IN_TILE_WIDTH2 - 1
+                && ty >= 1 && ty < IN_TILE_WIDTH2 - 1){
+                // Only compute the output tile region
                 out[p * nx * ny + j * nx * k] = c0 * inCurr_s[ty][tx]
                                               + c1 * inCurr_s[ty][tx - 1]
                                               + c2 * inCurr_s[ty][tx + 1]
@@ -58,3 +66,15 @@ __global__ void stencil_v3(const float *in, float *out, int nx, int ny, int nz){
 
 
 }
+
+void stencil_v3_invok(uint32_t nx, uint32_t ny, uint32_t nz,
+                        float *in, float *out) {
+
+    dim3 blockDim(IN_TILE_WIDTH2, IN_TILE_WIDTH2, 1);
+    dim3 gridDim(ceil((float) nx / IN_TILE_WIDTH2),
+                ceil((float) ny / IN_TILE_WIDTH2),
+                ceil((float) nz / OUT_TILE_WIDTH2));
+
+    stencil_v3<<<blockDim, gridDim>>>(in, out, nx, ny, nz);
+    cudaDeviceSynchronize();
+    }

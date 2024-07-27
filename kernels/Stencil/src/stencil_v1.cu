@@ -24,8 +24,12 @@ __global__ void stencil_v1(const float *in, float *out, int nx, int ny, int nz){
     }
     __syncthreads();
 
-    if(gx > 0 && gx < nx - 1 && gy > 0 && gy < ny - 1 && gz > 0 && gz < nz - 1){    //Only the non-edge elements need to be computed.
-        if(tx > 0 && tx < IN_TILE_WIDTH - 1 && ty > 0 && ty < IN_TILE_WIDTH - 1 && tz > 0 && tz < IN_TILE_WIDTH - 1){   // Only some of threads(The OUT_TILE_WIDTH region) in a block need to be computed.
+    if(gx > 0 && gx < nx - 1 && gy > 0 && gy < ny - 1 && gz > 0 && gz < nz - 1){ 
+        //Only the non-edge elements need to be computed.
+        if(tx > 0 && tx < IN_TILE_WIDTH - 1
+            && ty > 0 && ty < IN_TILE_WIDTH - 1
+            && tz > 0 && tz < IN_TILE_WIDTH - 1){   
+            // Only some of threads(The OUT_TILE_WIDTH region) in a block need to be computed.
             out[gz * nx * ny + gy * nx + gx] = c0 * in_s[tz][ty][tx]
                                              + c1 * in_s[tz][ty][tx - 1]
                                              + c2 * in_s[tz][ty][tx + 1]
@@ -35,4 +39,17 @@ __global__ void stencil_v1(const float *in, float *out, int nx, int ny, int nz){
                                              + c6 * in_s[tz + 1][ty][tx];
         }
     }
+}
+
+void stencil_v1_invok(uint32_t nx, uint32_t ny, uint32_t nz,
+                        float *in, float *out) {
+
+    dim3 blockDim(IN_TILE_WIDTH, IN_TILE_WIDTH, IN_TILE_WIDTH);
+    dim3 gridDim(ceil((float)nx / blockDim.x),
+                ceil((float)ny / blockDim.y),
+                ceil((float)nz / blockDim.z));
+
+    stencil_v1<<<blockDim, gridDim>>>(in, out, nx, ny, nz);
+
+    cudaDeviceSynchronize();
 }

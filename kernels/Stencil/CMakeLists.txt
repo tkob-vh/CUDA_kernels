@@ -13,7 +13,7 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 file(GLOB SOURCES ${PROJECT_SOURCE_DIR}/src/*)
-list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/main.cu)
+list(APPEND SOURCES ${PROJECT_SOURCE_DIR}/main.cc)
 
 add_executable(stencil ${SOURCES})
 
