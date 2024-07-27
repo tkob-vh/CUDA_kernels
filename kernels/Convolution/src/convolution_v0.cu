@@ -31,3 +31,13 @@ __global__ void convolution_v0(float *N, float *F, float *P, int r, int width, i
         P[Row * width + Col] = Pvalue;
 
 }
+
+void convolution_v0_invok(uint32_t width, uint32_t height, uint32_t r,
+                            float *in, float *out, float *filter) {
+
+    dim3 blockDim(BLOCK_WIDTH, BLOCK_WIDTH);
+    dim3 gridDim(ceil(float(width) / BLOCK_WIDTH), ceil(float(height) / BLOCK_WIDTH));
+
+    convolution_v0<<<gridDim, blockDim>>>(in, filter, out, r, width, height);
+    cudaDeviceSynchronize();
+}
