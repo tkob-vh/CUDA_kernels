@@ -32,3 +32,11 @@ __global__ void histogram_v2(char *data, unsigned int length,
         }
     }
 }
+
+
+void histogram_v2_invok(int length, char *in, unsigned int *histo) {
+    dim3 blockDim(1024, 1, 1);
+    dim3 gridDim(ceil(float(length)/ (blockDim.x * CORASE_SIZE) ), 1, 1);
+
+    histogram_v2<<<gridDim, blockDim>>>(in, length, histo);
+}

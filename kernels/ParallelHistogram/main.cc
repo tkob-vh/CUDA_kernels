@@ -1,6 +1,9 @@
 #include <iostream>
 #include <chrono>
 #include <string>
+#include <filesystem>
+#include <fstream>
+
 #include "histogram.hh"
 
 int main(int argc, char **argv){
@@ -8,24 +11,24 @@ int main(int argc, char **argv){
         std::cerr << "Usage: " << argv[0] << "(v0|v1|v2)" << std::endl;
         return -1;
     }
-    std::string mode = argv[1];
+    std::string version = argv[1];
 
     int length;
     unsigned int histo[NUM_BINS];
 
-    FILE *fi;
 
-    fi = fopen("data/input.dat", "rb");
-    fread(&length, 1, sizeof(int), fi);
+    std::filesystem::path input_path = "data/input.dat";
+    std::ifstream input_file(input_path, std::ios::binary);
+    input_file.read(reinterpret_cast<char *>(&length), sizeof(int));
+
     std::cout << "The length of the random letters: " << length << std::endl;
 
-    char *in = (char *)malloc(length * sizeof(char));
+    char *in = new char[length];
 
-    fread(in, sizeof(char), length, fi);
-    fclose(fi);
+    input_file.read(reinterpret_cast<char *>(in), length *sizeof(char));
 
-    if(mode == "v0"){
-        std::cout << "The mode is v0" << std::endl;
+    if(version == "v0"){
+        std::cout << "The version is v0" << std::endl;
 
         auto t1 = std::chrono::steady_clock::now();
         char *in_d;
@@ -36,30 +39,25 @@ int main(int argc, char **argv){
 
         cudaMemcpy(in_d, in, length * sizeof(char), cudaMemcpyHostToDevice);
 
-        dim3 blockDim(1024, 1, 1);
-        dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
-
-        histogram_v0<<<gridDim, blockDim>>>(in_d, length, histo_d);
-        cudaDeviceSynchronize();
+        histogram_v0_invok(length, in_d, histo_d);
 
         cudaMemcpy(histo, histo_d, NUM_BINS * sizeof(unsigned int),
                     cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
-        int d1 = std::chrono::duration_cast
+        int duration = std::chrono::duration_cast
                             <std::chrono::milliseconds>(t2 - t1).count();
 
-        std::cout << d1 << std::endl;
+        std::cout << "Duration: " << duration << " ms" << std::endl;
 
         for(int i = 0; i < NUM_BINS; i++){
             std::cout << histo[i] << std::endl;
         } 
 
-        free(in);
         cudaFree(in_d); cudaFree(histo_d);
     }
-    else if(mode == "v1") {
-        std::cout << "The mode is v1" << std::endl;
+    else if(version == "v1") {
+        std::cout << "The version is v1" << std::endl;
 
         auto t1 = std::chrono::steady_clock::now();
         char *in_d;
@@ -70,28 +68,24 @@ int main(int argc, char **argv){
 
         cudaMemcpy(in_d, in, length * sizeof(char), cudaMemcpyHostToDevice);
 
-        dim3 blockDim(1024, 1, 1);
-        dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
-
-        histogram_v1<<<gridDim, blockDim>>>(in_d, length, histo_d);
+        histogram_v1_invok(length, in_d, histo_d);
         cudaMemcpy(histo, histo_d, NUM_BINS * sizeof(unsigned int),
                     cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
 
-        int d1 = std::chrono::duration_cast
+        int duration = std::chrono::duration_cast
                             <std::chrono::milliseconds>(t2 - t1).count();
 
-        std::cout << d1 << std::endl;
+        std::cout << "Duration: " << duration << " ms" << std::endl;
 
         for(int i = 0; i < NUM_BINS; i++){
             std::cout << histo[i] << std::endl;
         }
-        free(in);
         cudaFree(in_d); cudaFree(histo_d);
     }
-    else if(mode == "v2") {
-        std::cout << "The mode is v2" << std::endl;
+    else if(version == "v2") {
+        std::cout << "The version is v2" << std::endl;
 
         auto t1 = std::chrono::steady_clock::now();
         char *in_d;
@@ -100,28 +94,24 @@ int main(int argc, char **argv){
         cudaMalloc(&in_d, length * sizeof(char));
         cudaMalloc(&histo_d, NUM_BINS * sizeof(unsigned int));
 
-        dim3 blockDim(1024, 1, 1);
-        dim3 gridDim(ceil(float(length)/ (blockDim.x * CORASE_SIZE) ), 1, 1);
-
-        histogram_v2<<<gridDim, blockDim>>>(in_d, length, histo_d);
+        histogram_v2_invok(length, in_d, histo_d);
         cudaMemcpy(histo, histo_d, NUM_BINS * sizeof(unsigned int),
                     cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
 
-        int d1 = std::chrono::duration_cast
+        int duration = std::chrono::duration_cast
                             <std::chrono::milliseconds>(t2 - t1).count();
 
-        std::cout << d1 << std::endl;
+        std::cout << "Duration: " << duration << " ms" << std::endl;
         for(int i = 0; i < NUM_BINS; i++) {
             std::cout << histo[i] << std::endl;
         }
 
-        free(in);
         cudaFree(in_d); cudaFree(histo_d);
     }
-    else if(mode == "v3") {
-        std::cout << "The mode is v3" << std::endl;
+    else if(version == "v3") {
+        std::cout << "The version is v3" << std::endl;
 
         auto t1 = std::chrono::steady_clock::now();
         char *in_d;
@@ -130,32 +120,29 @@ int main(int argc, char **argv){
         cudaMalloc(&in_d, length * sizeof(char));
         cudaMalloc(&histo_d, NUM_BINS * sizeof(unsigned int));
 
-        dim3 blockDim(1024, 1, 1);
-        dim3 gridDim(ceil(float(length)/ (blockDim.x * CORASE_SIZE) ), 1, 1);
-
-        histogram_v3<<<gridDim, blockDim>>>(in_d, length, histo_d);
+        histogram_v3_invok(length, in_d, histo_d);
         cudaMemcpy(histo, histo_d, NUM_BINS * sizeof(unsigned int),
                     cudaMemcpyDeviceToHost);
 
         auto t2 = std::chrono::steady_clock::now();
 
-        int d1 = std::chrono::duration_cast
+        int duration = std::chrono::duration_cast
                             <std::chrono::milliseconds>(t2 - t1).count();
 
-        std::cout << d1 << std::endl;
+        std::cout << "Duration: " << duration << " ms" << std::endl;
         for(int i = 0; i < NUM_BINS; i++) {
             std::cout << histo[i] << std::endl;
         }
 
-        free(in);
         cudaFree(in_d); cudaFree(histo_d);
     }
 
     else{
-        std::cout << "The mode is illegal" << std::endl;
-        free(in);
+        std::cout << "The version is illegal" << std::endl;
         return -1;
     }
 
+
+    free(in);
     return 0;
 }

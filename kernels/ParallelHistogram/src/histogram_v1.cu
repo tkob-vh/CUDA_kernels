@@ -27,3 +27,11 @@ __global__ void histogram_v1(char *data, unsigned int length, unsigned int *hist
         if(num > 0) atomicAdd(&histo[bin], num);
     }
 }
+
+
+void histogram_v1_invok(int length, char *in, unsigned int *histo) {
+    dim3 blockDim(1024, 1, 1);
+    dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
+
+    histogram_v1<<<gridDim, blockDim>>>(in, length, histo);
+}

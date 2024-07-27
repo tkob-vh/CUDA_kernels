@@ -13,3 +13,12 @@ __global__ void histogram_v0(char *data, unsigned int length, unsigned int *hist
         }
     }
 }
+
+void histogram_v0_invok(int length, char *in, unsigned int *histo) {
+
+    dim3 blockDim(1024, 1, 1);
+    dim3 gridDim(ceil(float(length) / blockDim.x), 1, 1);
+
+    histogram_v0<<<gridDim, blockDim>>>(in, length, histo);
+    cudaDeviceSynchronize();
+}

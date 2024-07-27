@@ -47,3 +47,12 @@ __global__ void histogram_v3(char *data, unsigned int length,
         }
     }
 }
+
+
+
+void histogram_v3_invok(int length, char *in, unsigned int *histo) {
+    dim3 blockDim(1024, 1, 1);
+    dim3 gridDim(ceil(float(length)/ (blockDim.x * CORASE_SIZE) ), 1, 1);
+
+    histogram_v3<<<gridDim, blockDim>>>(in, length, histo);
+}
