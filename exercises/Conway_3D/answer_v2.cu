@@ -1,3 +1,4 @@
+// Refer to https://tkob-vh.github.io/posts/3d_conway_game/ for explanations.
 #include <iostream>
 #include <string>
 #include <cstddef>
