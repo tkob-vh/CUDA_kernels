@@ -25,3 +25,11 @@ __global__ void reduction_v2(float *input, float *output) {
         *output = input_s[0];
     }
 }
+
+void reduction_v2_invok(float *input, float *output, uint64_t num) {
+    assert(num <= 2048 && num % 2 == 0);
+    dim3 blockDim(num / 2, 1, 1);
+    dim3 gridDim(1, 1, 1);
+
+    reduction_v2<<<gridDim, blockDim>>>(input, output);
+}

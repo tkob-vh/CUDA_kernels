@@ -1,5 +1,4 @@
 #include <reduction.hh>
-#include <cassert>
 /*
  * \file reduction_v0.cu
  * A naive reduction implementation with gridDim.x = 1
