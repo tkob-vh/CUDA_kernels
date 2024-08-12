@@ -1,5 +1,6 @@
 # G. 3D 生命游戏
 
+Detailed explainations of the answer is placed on [Optimizing 3D Conway's Game of Life using CUDA](https://tkob-vh.github.io/posts/3d_conway_game/)
 ## 题面
 
 ### 简介
